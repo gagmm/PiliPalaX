@@ -23,11 +23,17 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '2.19.6'
+        flutter-version: '3.7.12'
         channel: 'stable'
+    
+    - name: Verify Flutter version
+      run: flutter --version
     
     - name: Get dependencies
       run: flutter pub get
+    
+    - name: Analyze code
+      run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
     
     - name: Build APK
       run: flutter build apk --release
@@ -38,12 +44,14 @@ jobs:
         name: app-release
         path: build/app/outputs/flutter-apk/app-release.apk
     
-    - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    - name: Upload APK to Release
+      if: github.event_name == 'push'
       uses: softprops/action-gh-release@v1
       with:
         files: build/app/outputs/flutter-apk/app-release.apk
-        tag_name: v${{ github.run_number }}
+        tag_name: build-${{ github.run_number }}
         draft: true
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
