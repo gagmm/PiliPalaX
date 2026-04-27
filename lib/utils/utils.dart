@@ -149,6 +149,16 @@ class Utils {
     return date;
   }
 
+  /// 获取文件名（不含扩展名或含扩展名）
+  /// PiliPlus WBI签名移植
+  static String getFileName(String path, {bool fileExt = true}) {
+    final fileName = path.split('/').last.split('?').first;
+    if (!fileExt) {
+      return fileName.split('.').first;
+    }
+    return fileName;
+  }
+
   // 完全相对时间显示
   static String formatTimestampToRelativeTime(timeStamp) {
     var difference = DateTime.now()

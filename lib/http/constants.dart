@@ -7,6 +7,9 @@ class HttpString {
   static const String passBaseUrl = 'https://passport.bilibili.com';
   static const String messageBaseUrl = 'https://message.bilibili.com';
   static const String spaceBaseUrl = 'https://space.bilibili.com';
+
+  // SponsorBlock服务器地址 (PiliPlus新增)
+  static const String sponsorBlockBaseUrl = 'https://api.sponsor.block';
   static const List<int> validateStatusCodes = [
     302,
     304,

@@ -205,7 +205,17 @@ class SettingBoxKey {
 
       // 代理host port
       systemProxyHost = 'systemProxyHost',
-      systemProxyPort = 'systemProxyPort';
+      systemProxyPort = 'systemProxyPort',
+
+      // SponsorBlock相关设置 (PiliPlus移植)
+      enableSponsorBlock = 'enableSponsorBlock', // 启用SponsorBlock
+      blockServer = 'blockServer', // SponsorBlock服务器
+      blockSettings = 'blockSettings', // 片段跳过设置
+      blockColor = 'blockColor', // 片段颜色设置
+      blockLimit = 'blockLimit', // 片段阈值
+      blockToast = 'blockToast', // 显示跳过提示
+      blockTrack = 'blockTrack', // 匿名上报统计
+      pgcSkipType = 'pgcSkipType'; // PGC跳过类型
 
   /// 外观
   static const String themeMode = 'themeMode',
@@ -240,9 +250,12 @@ class LocalCacheKey {
       // access_key
       accessKey = 'accessKey',
 
-      //
-      wbiKeys = 'wbiKeys',
-      timeStamp = 'timeStamp';
+      // WBI签名相关 (PiliPlus移植)
+      wbiMixinKey = 'wbiMixinKey',
+      wbiTimeStamp = 'wbiTimeStamp',
+      
+      // SponsorBlock相关 (PiliPlus移植)
+      blockUserID = 'blockUserID';
 }
 
 class VideoBoxKey {
@@ -273,5 +286,9 @@ class OnlineCacheKey {
       // 隐私设置-黑名单管理
       blackMidsList = 'blackMidsList',
       // 弹幕屏蔽规则
-      danmakuFilterRule = 'danmakuFilterRule';
+      danmakuFilterRule = 'danmakuFilterRule',
+      // SponsorBlock用户ID
+      blockUserID = 'blockUserID',
+      // WBI密钥 (PiliPlus移植)
+      wbiKeys = 'wbiKeys';
 }

@@ -223,6 +223,7 @@ class Api {
 
   // 分类搜索
   static const String searchByType = '/x/web-interface/wbi/search/type';
+  static const String searchAll = '/x/web-interface/wbi/search/all/v2';
 
   // 记录视频播放进度
   // https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/report.md
@@ -350,6 +351,40 @@ class Api {
   // github 获取最新版
   static const String latestApp =
       'https://api.github.com/repos/orz12/pilipala/releases';
+
+  // 视频播放详情 v2 (PiliPlus新增)
+  static const String playInfo = '/x/player/wbi/v2';
+
+  // AI总结 (PiliPlus新增)
+  static const String aiConclusion = '/x/web-interface/view/conclusion/get';
+
+  // 弹幕增强 (PiliPlus新增)
+  static const String danmakuLike = '/x/v2/dm/thumbup/add';
+  static const String danmakuReport = '/x/dm/report/add';
+  static const String danmakuRecall = '/x/dm/recall';
+  static const String danmakuEditState = '/x/v2/dm/edit/state';
+
+  // 评论互动 (PiliPlus新增)
+  static const String replyInteraction = '/x/v2/reply/subject/interaction-status';
+  static const String replySubjectModify = '/x/v2/reply/subject/modify';
+  static const String replyTop = '/x/v2/reply/top';
+
+  // 用户在看的视频数 (PiliPlus新增)
+  static const String onlineTotal = '/x/player/online/total';
+
+  // 排行榜 (PiliPlus新增)
+  static const String getRankApi = "/x/web-interface/ranking/v2";
+  static const String pgcRank = "/pgc/web/rank/list";
+  static const String pgcSeasonRank = "/pgc/season/rank/web/list";
+
+  // 每周必看/入站必刷 (PiliPlus新增)
+  static const String popularSeriesOne = '/x/web-interface/popular/series/one';
+  static const String popularSeriesList = '/x/web-interface/popular/series/list';
+  static const String popularPrecious = '/x/web-interface/popular/precious';
+
+  // 热搜趋势 (PiliPlus新增)
+  static const String searchTrending = '/x/v2/search/trending/ranking';
+  static const String searchRecommend = '/x/v2/search/recommend';
 
   // 多少人在看
   // https://api.bilibili.com/x/player/online/total?aid=913663681&cid=1203559746&bvid=BV1MM4y1s7NZ&ts=56427838

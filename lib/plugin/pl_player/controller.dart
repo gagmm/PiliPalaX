@@ -25,11 +25,17 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:PiliPalaX/http/video.dart';
 import 'package:PiliPalaX/pages/mine/controller.dart';
+import 'package:PiliPalaX/pages/sponsor_block/block_mixin.dart';
 import 'package:PiliPalaX/plugin/pl_player/index.dart';
 import 'package:PiliPalaX/plugin/pl_player/models/play_repeat.dart';
 import 'package:PiliPalaX/services/service_locator.dart';
 import 'package:PiliPalaX/utils/feed_back.dart';
 import 'package:PiliPalaX/utils/storage.dart';
+import 'package:PiliPalaX/models/common/sponsor_block/segment_model.dart';
+import 'package:PiliPalaX/models/common/sponsor_block/segment_type.dart';
+import 'package:PiliPalaX/models/common/sponsor_block/skip_type.dart';
+import 'package:PiliPalaX/models_new/sponsor_block/segment_item.dart';
+import 'package:PiliPalaX/http/sponsor_block.dart';
 // import 'package:screen_brightness/screen_brightness.dart';
 import 'package:universal_platform/universal_platform.dart';
 import '../../models/video/play/subtitle.dart';
@@ -44,7 +50,7 @@ Box videoStorage = GStorage.video;
 Box setting = GStorage.setting;
 Box onlineCache = GStorage.onlineCache;
 
-class PlPlayerController {
+class PlPlayerController extends GetxController with BlockConfigMixin {
   static Player? _videoPlayerController;
   VideoController? _videoController;
 
@@ -121,6 +127,11 @@ class PlPlayerController {
   int _cid = 0;
   int _heartDuration = 0;
   bool _enableHeart = true;
+
+  // SponsorBlock相关 (PiliPlus移植)
+  List<SegmentModel> _segmentList = <SegmentModel>[];
+  int? _lastBlockPos;
+  bool _skipProcessing = false;
 
   late DataSource dataSource;
   final RxList<Map<String, String>> _vttSubtitles = <Map<String, String>>[].obs;
@@ -569,6 +580,11 @@ class PlPlayerController {
           chooseSubtitle();
         });
       }
+
+      // SponsorBlock: 查询片段（非直播视频）
+      if (videoType.value != 'live' && _bvid.isNotEmpty && _cid != 0) {
+        querySponsorBlockSegments(bvid: _bvid, cid: _cid);
+      }
     } catch (err, stackTrace) {
       dataStatus.status.value = DataStatus.error;
       debugPrint(stackTrace.toString());
@@ -828,6 +844,9 @@ class PlPlayerController {
             element(event);
           }
           makeHeartBeat(event.inSeconds);
+
+          /// SponsorBlock 跳过逻辑 (PiliPlus移植)
+          _processSponsorBlock(event);
         }),
         videoPlayerController!.stream.duration.listen((Duration event) {
           duration.value = event;
@@ -911,6 +930,134 @@ class PlPlayerController {
     for (final s in subscriptions) {
       s.cancel();
     }
+  }
+
+  /// SponsorBlock: 处理片段跳过逻辑
+  /// 检查当前播放位置是否落在SponsorBlock片段内，并根据设置执行跳过
+  void _processSponsorBlock(Duration position) {
+    if (_segmentList.isEmpty) return;
+    if (_skipProcessing) return;
+    if (!enableSponsorBlock) return;
+
+    final int currentPosMs = position.inMilliseconds;
+    final int currentPosSec = position.inSeconds;
+
+    // 每秒只检查一次（避免频繁检查）
+    if (currentPosSec == _lastBlockPos) return;
+    _lastBlockPos = currentPosSec;
+
+    for (final SegmentModel segment in _segmentList) {
+      // 检查当前时间是否在片段开始位置（误差1秒内）
+      if (currentPosMs <= segment.start && segment.start <= currentPosMs + 1000) {
+        final SkipType skipType = segment.skipType;
+
+        switch (skipType) {
+          case SkipType.alwaysSkip:
+            _skipSegment(segment);
+            break;
+          case SkipType.skipOnce:
+            if (!segment.hasSkipped) {
+              segment.hasSkipped = true;
+              _skipSegment(segment);
+            }
+            break;
+          case SkipType.skipManually:
+            // 手动跳过：显示提示但不自动跳过
+            // 需要UI层实现提示按钮
+            if (!segment.hasSkipped) {
+              segment.hasSkipped = true;
+              // TODO: 显示手动跳过提示UI
+              _showSkipToast('${segment.segmentType.title}片段可手动跳过');
+            }
+            break;
+          case SkipType.showOnly:
+            // 仅显示，不跳过
+            if (!segment.hasSkipped) {
+              segment.hasSkipped = true;
+              _showSkipToast('${segment.segmentType.title}片段开始');
+            }
+            break;
+          default:
+            break;
+        }
+        break; // 一次只处理一个片段
+      }
+    }
+  }
+
+  /// 跳过片段：跳转到片段结束位置
+  Future<void> _skipSegment(SegmentModel segment) async {
+    try {
+      _skipProcessing = true;
+      await seekTo(Duration(milliseconds: segment.end));
+      _showSkipToast('已跳过${segment.segmentType.shortTitle}片段');
+
+      // 匿名上报已跳过（如果启用）
+      final bool blockTrack = setting.get(
+        SettingBoxKey.blockTrack,
+        defaultValue: true,
+      ) as bool;
+      if (blockTrack && segment.uuid.isNotEmpty) {
+        SponsorBlock.viewedVideoSponsorTime(segment.uuid);
+      }
+    } catch (e) {
+      debugPrint('Failed to skip segment: $e');
+    } finally {
+      _skipProcessing = false;
+    }
+  }
+
+  /// 显示跳过提示
+  void _showSkipToast(String msg) {
+    SmartDialog.showToast(msg);
+  }
+
+  /// 查询SponsorBlock片段数据
+  /// 在视频加载后调用，传入bvid和cid
+  Future<void> querySponsorBlockSegments({
+    required String bvid,
+    required int cid,
+  }) async {
+    if (!enableSponsorBlock) return;
+
+    try {
+      final result = await SponsorBlock.getSkipSegments(
+        bvid: bvid,
+        cid: cid,
+      );
+
+      if (result is Success<List<SegmentItemModel>>) {
+        final List<SegmentModel> segments = result.response
+            .where((item) =>
+                enableList.contains(item.category) &&
+                item.segment[1] >= item.segment[0])
+            .map((item) => SegmentModel.fromItemModel(
+                  item,
+                  this,
+                ))
+            .toList();
+
+        _segmentList.clear();
+        _segmentList.addAll(segments);
+
+        debugPrint('SponsorBlock: 加载了 ${segments.length} 个片段');
+
+        // 如果当前正在播放，检查是否需要立即跳过
+        if (dataStatus.status.value == DataStatus.loaded &&
+            _position.value.inMilliseconds > 0) {
+          _processSponsorBlock(_position.value);
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to query SponsorBlock: $e');
+    }
+  }
+
+  /// 清除SponsorBlock片段列表
+  void clearSponsorBlockSegments() {
+    _segmentList.clear();
+    _lastBlockPos = null;
+    _skipProcessing = false;
   }
 
   /// 跳转至指定位置
