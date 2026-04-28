@@ -56,7 +56,7 @@ jobs:
       - name: 安装Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 2.19.6
+          flutter-version: 3.16.9
           channel: stable
 
       - name: 下载依赖
